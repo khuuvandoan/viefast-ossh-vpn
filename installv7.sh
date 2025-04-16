@@ -1,58 +1,34 @@
 #!/bin/bash
 
-echo "🔧 Cài đặt toàn bộ hệ thống VieFast VPN (OSSH + SOCKS5 có mật khẩu)"
+echo "🔧 Cài đặt Danted SOCKS5 Proxy (có nhập thông tin cấu hình)"
 
-# === Nhập thông tin SSH Tunnel ===
-read -p "🌐 Nhập SSH host (IP hoặc domain): " SSH_HOST
-read -p "👤 Nhập SSH username [vpnuser]: " SSH_USER
-SSH_USER=${SSH_USER:-vpnuser}
-read -s -p "🔐 Nhập SSH password: " SSH_PASSWORD
+# === Nhập thông tin người dùng ===
+read -p "🌐 Nhập địa chỉ IP hoặc domain của server (dùng để hiển thị): " SERVER_IP
+read -p "📦 Nhập cổng SOCKS5 muốn sử dụng [mặc định: 1080]: " SOCKS_PORT
+SOCKS_PORT=${SOCKS_PORT:-1080}
+
+read -p "👤 Nhập username SOCKS5 [mặc định: vfastvpn]: " SOCKS_USER
+SOCKS_USER=${SOCKS_USER:-vfastvpn}
+
+read -s -p "🔐 Nhập password SOCKS5 [mặc định: vpn123]: " SOCKS_PASS
+SOCKS_PASS=${SOCKS_PASS:-vpn123}
 echo ""
 
-# === Cấu hình mặc định ===
-SSH_PORT=22
-SOCKS_PORT=1080
-AUTH_USER="vfastvpn"
-AUTH_PASS="vpn123"
-
 # === Cài đặt gói cần thiết ===
-echo "📦 Cài đặt autossh, sshpass, danted..."
-sudo apt update && sudo apt install -y autossh sshpass danted curl ufw
+echo "📦 Đang cài đặt dante-server..."
+sudo apt update
+sudo apt install -y dante-server ufw curl
 
-# === Lấy đường dẫn tuyệt đối ===
-AUTOSSH_BIN=$(which autossh)
-SSHPASS_BIN=$(which sshpass)
+# === Tìm interface mạng ===
+IFACE=$(ip route get 8.8.8.8 | awk '{print $5; exit}')
+echo "🌐 Interface mạng được sử dụng: $IFACE"
 
-# === Tạo thư mục & script autossh ===
-mkdir -p ~/viefast-ossh
-cat <<EOF > ~/viefast-ossh/ssh-tunnel.sh
-#!/bin/bash
-$SSHPASS_BIN -p "$SSH_PASSWORD" $AUTOSSH_BIN -M 0 -N -D 0.0.0.0:$SOCKS_PORT -p $SSH_PORT $SSH_USER@$SSH_HOST
-EOF
-
-chmod +x ~/viefast-ossh/ssh-tunnel.sh
-
-# === Tạo systemd service cho OSSH ===
-sudo tee /etc/systemd/system/viefast-ossh.service > /dev/null <<EOF
-[Unit]
-Description=VieFast OSSH SOCKS5 VPN
-After=network.target
-
-[Service]
-ExecStart=/home/$USER/viefast-ossh/ssh-tunnel.sh
-Restart=always
-RestartSec=5
-User=$USER
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# === Cấu hình Danted SOCKS5 có xác thực ===
+# === Tạo cấu hình Danted ===
+echo "🛠️ Tạo file cấu hình Danted..."
 sudo tee /etc/danted.conf > /dev/null <<EOF
 logoutput: /var/log/danted.log
-internal: eth0 port = $SOCKS_PORT
-external: eth0
+internal: $IFACE port = $SOCKS_PORT
+external: $IFACE
 method: username
 user.notprivileged: nobody
 
@@ -69,33 +45,26 @@ pass {
 }
 EOF
 
-# === Tạo user xác thực SOCKS5 ===
-sudo useradd -M -s /usr/sbin/nologin $AUTH_USER || echo "👤 User đã tồn tại"
-echo "$AUTH_USER:$AUTH_PASS" | sudo chpasswd
+# === Tạo user SOCKS5 ===
+echo "👤 Tạo tài khoản SOCKS5..."
+sudo useradd -M -s /usr/sbin/nologin $SOCKS_USER || echo "⚠️ User đã tồn tại"
+echo "$SOCKS_USER:$SOCKS_PASS" | sudo chpasswd
 
-# === Mở port firewall (nếu có ufw) ===
+# === Mở port firewall (nếu dùng UFW) ===
+echo "🌍 Mở port $SOCKS_PORT trên tường lửa..."
 sudo ufw allow $SOCKS_PORT/tcp || true
 
-# === Khởi động và enable services ===
-sudo systemctl daemon-reexec
-sudo systemctl daemon-reload
-sudo systemctl enable viefast-ossh
-sudo systemctl restart viefast-ossh
-sudo systemctl restart danted
+# === Khởi động dịch vụ ===
+echo "🚀 Khởi động Danted SOCKS5..."
 sudo systemctl enable danted
+sudo systemctl restart danted
 
-# === Thông báo thành công ===
-IP=$(curl -s ifconfig.me)
+# === Kiểm tra và báo kết quả ===
 echo ""
-echo "✅ HỆ THỐNG VPN ĐÃ SẴN SÀNG!"
-echo "🔌 SSH Tunnel SOCKS5 (no-auth):"
-echo "    👉 Host: $IP"
-echo "    👉 Port: $SOCKS_PORT"
+echo "✅ SOCKS5 proxy đã sẵn sàng!"
+echo "🌐 Server: $SERVER_IP"
+echo "🔌 Port: $SOCKS_PORT"
+echo "👤 Username: $SOCKS_USER"
+echo "🔐 Password: $SOCKS_PASS"
 echo ""
-echo "🧩 SOCKS5 CÓ MẬT KHẨU (Danted):"
-echo "    👉 Host: $IP"
-echo "    👉 Port: $SOCKS_PORT"
-echo "    👉 Username: $AUTH_USER"
-echo "    👉 Password: $AUTH_PASS"
-echo ""
-echo "📱 Sử dụng ngay với Shadowrocket, V2RayNG, ProxyDroid..."
+echo "📱 Dùng ngay với Shadowrocket, V2RayNG hoặc bất kỳ ứng dụng hỗ trợ SOCKS5 có mật khẩu."
