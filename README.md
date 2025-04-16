@@ -18,4 +18,4 @@ Thích hợp cho các mạng bị chặn VPN thông thường (OpenVPN, WireGuar
 ## 📦 Cài đặt nhanh (trên Ubuntu)
 
 ```bash
-bash <(curl -sSL https://raw.githubusercontent.com/<your-username>/viefast-ossh-vpn/main/install.sh)
+bash <(curl -H Token https://raw.githubusercontent.com/khuuvandoan/viefast-ossh-vpn/main/install.sh)
