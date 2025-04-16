@@ -13,12 +13,13 @@ echo "🛠️ Cài đặt VieFast OSSH VPN + Clash Meta..."
 # 1. Cài đặt yêu cầu
 sudo apt update && sudo apt install curl wget unzip -y
 
-# 2. Tải Clash Meta
+# Tải bản mới nhất từ MetaCubeX (Clash Meta)
 mkdir -p ~/viefast-ossh
 cd ~/viefast-ossh
-wget -O clash-meta.tar.gz https://github.com/MetaCubeX/mihomo/releases/download/v1.16.0/mihomo-linux-amd64-v1.16.0.gz
-gunzip mihomo-linux-amd64-v1.16.0.gz
-mv mihomo-linux-amd64-v1.16.0 clash-meta
+
+# Tải và giải nén
+wget https://github.com/MetaCubeX/mihomo/releases/latest/download/mihomo-linux-amd64.gz -O clash-meta.gz
+gunzip clash-meta.gz
 chmod +x clash-meta
 
 # 3. Tạo SSH tunnel script
