@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ====== THÔNG TIN CẤU HÌNH SSH ==========
-SSH_USER="VT-TikTok"
+SSH_USER="root"
 SSH_HOST="103.77.247.208"
 SSH_PORT=22
 LOCAL_SOCKS_PORT=1080
